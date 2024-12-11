@@ -9,6 +9,10 @@ from comfy.conds import CONDCrossAttn
 
 from .model import ELLA, T5TextEmbedder
 
+from configs.config import get_juicefs_full_path_safemode
+from configs.node_fields import Comfyui_ELLA_Mapping
+
+
 ELLA_TYPE = "ELLA"
 ELLA_EMBEDS_TYPE = "ELLA_EMBEDS"
 ELLA_EMBEDS_PREFIX = "ella_"
@@ -325,7 +329,9 @@ class ELLALoader:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "name": (folder_paths.get_filename_list("ella"),),
+                # liblib adapter
+                # "name": (folder_paths.get_filename_list("ella"),),
+                "name": (["ella-sd1.5-tsc-t5xl.safetensors"],),
             },
         }
 
@@ -334,7 +340,9 @@ class ELLALoader:
     CATEGORY = "ella/loaders"
 
     def load(self, name: str, **kwargs):
-        ella_file = folder_paths.get_full_path("ella", name)
+        #liblib adapter 
+        # ella_file = folder_paths.get_full_path("ella", name)
+        ella_file = get_juicefs_full_path_safemode(Comfyui_ELLA_Mapping,name)
         if not ella_file:
             raise ValueError("ELLA ckpt not found")
         ella = ELLA(ella_file)
@@ -344,15 +352,17 @@ class ELLALoader:
 class T5TextEncoderLoader:
     @classmethod
     def INPUT_TYPES(cls):
-        paths = []
-        for search_path in folder_paths.get_folder_paths("ella_encoder"):
-            if os.path.exists(search_path):
-                for root, _, files in os.walk(search_path, followlinks=True):
-                    if "config.json" in files:
-                        paths.append(os.path.relpath(root, start=search_path))
+        #liblib adapter 强制指向t5
+        # paths = []
+        # for search_path in folder_paths.get_folder_paths("ella_encoder"):
+        #     if os.path.exists(search_path):
+        #         for root, _, files in os.walk(search_path, followlinks=True):
+        #             if "config.json" in files:
+        #                 paths.append(os.path.relpath(root, start=search_path))
         return {
             "required": {
-                "name": (paths,),
+                # "name": (paths,),
+                "name":(["google/flan-t5-xl"],),
                 "max_length": ("INT", {"default": 0, "min": 0, "max": 128, "step": 16}),
                 "dtype": (["auto", "FP32", "FP16"],),
             }
@@ -363,15 +373,17 @@ class T5TextEncoderLoader:
     CATEGORY = "ella/loaders"
 
     def load(self, name: str, max_length: int = 0, dtype="auto", **kwargs):
-        t5_file = folder_paths.get_full_path("ella_encoder", name)
-        # "flexible_token_length" trick: Set `max_length=None` eliminating any text token padding or truncation.
-        # Help improve the quality of generated images corresponding to short captions.
-        for search_path in folder_paths.get_folder_paths("ella_encoder"):
-            if os.path.exists(search_path):
-                path = os.path.join(search_path, name)
-                if os.path.exists(path):
-                    t5_file = path
-                    break
+        # liblib adapter
+        # t5_file = folder_paths.get_full_path("ella_encoder", name)
+        # # "flexible_token_length" trick: Set `max_length=None` eliminating any text token padding or truncation.
+        # # Help improve the quality of generated images corresponding to short captions.
+        # for search_path in folder_paths.get_folder_paths("ella_encoder"):
+        #     if os.path.exists(search_path):
+        #         path = os.path.join(search_path, name)
+        #         if os.path.exists(path):
+        #             t5_file = path
+        #             break
+        t5_file = get_juicefs_full_path_safemode(Comfyui_ELLA_Mapping,name)
         if dtype == "auto":
             dtype = model_management.text_encoder_dtype(model_management.text_encoder_device())
         elif dtype == "FP16":
